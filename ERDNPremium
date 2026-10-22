@@ -1,0 +1,18 @@
+local HomeTab     = Window:Tab({ Title = "Home", Icon = "home" })
+local FarmingTab  = Window:Tab({ Title = "Farming", Icon = "pickaxe" })
+local RebirthsTab = Window:Tab({ Title = "Rebirths", Icon = "refresh-cw" })
+local PacksTab    = Window:Tab({ Title = "Packs", Icon = "package" })
+
+-- Pestaña: Home
+HomeTab:Section({ Title = "Información del Script" })
+
+HomeTab:Paragraph({
+    Title = "Bienvenido a ERDN Premium",
+    Desc = "Script oficial creado por Christian & Lale para Muscle Legends."
+})
+
+local PlayerName = game.Players.LocalPlayer.DisplayName
+HomeTab:Paragraph({
+    Title = "Usuario conectado",
+    Desc = "Hola, " .. PlayerName .. " 👋"
+})
