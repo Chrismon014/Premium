@@ -1,18 +1,987 @@
-local HomeTab     = Window:Tab({ Title = "Home", Icon = "home" })
-local FarmingTab  = Window:Tab({ Title = "Farming", Icon = "pickaxe" })
-local RebirthsTab = Window:Tab({ Title = "Rebirths", Icon = "refresh-cw" })
-local PacksTab    = Window:Tab({ Title = "Packs", Icon = "package" })
+-- =======================================================
+-- ERDN PREMIUM - SCRIPT COMPLETO, UNIFICADO Y DEFINITIVO
+-- =======================================================
 
--- Pestaña: Home
-HomeTab:Section({ Title = "Información del Script" })
+-- 1. CARGA DE LIBRERÍA WINDUI
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+if not WindUI then
+    warn("Error al cargar WindUI.")
+    return
+end
 
-HomeTab:Paragraph({
-    Title = "Bienvenido a ERDN Premium",
-    Desc = "Script oficial creado por Christian & Lale para Muscle Legends."
+-- =======================================================
+-- 2. REGISTRO DEL TEMA PERSONALIZADO
+-- =======================================================
+WindUI:AddTheme({
+    Name = "MysteryTheme",
+    Accent = Color3.fromHex("#00E5FF"),           -- Borde y detalles neón
+    Background = Color3.fromHex("#121214"),       -- Fondos de la ventana
+    ElementBackground = Color3.fromHex("#1A1A1E"),-- Elementos
+    Text = Color3.fromHex("#FFFFFF"),             -- Texto blanco
+    Icon = Color3.fromHex("#00E5FF"),             -- Íconos
+    Placeholder = Color3.fromHex("#808080"),
 })
 
-local PlayerName = game.Players.LocalPlayer.DisplayName
-HomeTab:Paragraph({
-    Title = "Usuario conectado",
-    Desc = "Hola, " .. PlayerName .. " 👋"
+-- =======================================================
+-- 3. CREAR VENTANA PRINCIPAL (OpenButton desactivado para usar el botón móvil propio)
+-- =======================================================
+local Window = WindUI:CreateWindow({
+    Title = "ERDN Premium",
+    Subtitle = "By Christian - Cristian",
+    Size = UDim2.fromOffset(580, 420),
+    Transparent = false,
+    Theme = "MysteryTheme", 
+    Folder = "ERDNPremiumConfig",
+    OpenButton = {
+        Enabled = false -- Desactivado para evitar que desaparezca en Delta
+    }
 })
+
+-- =======================================================
+-- 4. BOTÓN FLOTANTE PERSONALIZADO PARA MÓVIL (Anti-Desaparición)
+-- =======================================================
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Workspace = game:GetService("Workspace")
+
+local LP = Players.LocalPlayer
+
+local mobileScreenGui = Instance.new("ScreenGui")
+mobileScreenGui.Name = "ERDN_MobileButtonGUI"
+mobileScreenGui.ResetOnSpawn = false
+pcall(function()
+    mobileScreenGui.Parent = CoreGui
+end)
+if not mobileScreenGui.Parent then
+    mobileScreenGui.Parent = LP:WaitForChild("PlayerGui")
+end
+
+local floatButton = Instance.new("TextButton")
+floatButton.Name = "OpenERDNButton"
+floatButton.Size = UDim2.new(0, 170, 0, 42)
+floatButton.Position = UDim2.new(0, 20, 0.4, 0)
+floatButton.BackgroundColor3 = Color3.fromHex("#121214")
+floatButton.TextColor3 = Color3.fromHex("#FFFFFF")
+floatButton.Text = "Open ERDN Premium"
+floatButton.TextSize = 13
+floatButton.Font = Enum.Font.GothamBold
+floatButton.Active = true
+floatButton.Draggable = true
+floatButton.Parent = mobileScreenGui
+
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Color = Color3.fromHex("#00E5FF")
+btnStroke.Thickness = 2
+btnStroke.Parent = floatButton
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = floatButton
+
+local isOpen = true
+floatButton.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    pcall(function()
+        Window:Toggle()
+    end)
+end)
+
+-- =======================================================
+-- 5. SERVICIOS Y VARIABLES GLOBALES DE FUNCIONAMIENTO
+-- =======================================================
+local services = {
+    replicatedstorage = ReplicatedStorage,
+    virtualinputmanager = game:GetService("VirtualInputManager"),
+    collectionservice = game:GetService("CollectionService"),
+    muscleEvent = ReplicatedStorage:WaitForChild("rEvents", 10),
+    isSolara = false,
+}
+
+local lp = { player = LP }
+local runtime = {
+    Alive = true,
+    Spawn = function(self, func, ...) return task.spawn(func, ...) end,
+    Connect = function(self, signal, func) return signal:Connect(func) end,
+    Defer = function(self, func, ...) return task.defer(func, ...) end
+}
+
+-- Anti-AFK Automático
+LP.Idled:Connect(function()
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new())
+end)
+
+repeat task.wait(0.3) until LP:FindFirstChild("muscleEvent") and LP:FindFirstChild("leaderstats")
+
+local Strength = LP.leaderstats:WaitForChild("Strength")
+local Rebirths = LP.leaderstats:WaitForChild("Rebirths")
+
+-- Modos de Farming y Rebirth
+local FastFarm800 = false
+local FastFarm1k5k = false
+local AutoRebirth = false
+local RebirthsCombination = false
+local RebirthChaos = false
+local RebirthsTitans = false
+
+local AutoRejoinActive = true
+local AutoExecuteActive = true
+local RedactNameActive = false
+local AntiCheatActive = true
+local ConfigFileName = "ERDNPublic_Config.json"
+
+local function SaveConfig()
+    if type(writefile) == "function" then
+        pcall(function()
+            local configData = {
+                AutoExecute = AutoExecuteActive,
+                AutoRejoin = AutoRejoinActive,
+                RedactName = RedactNameActive,
+                AntiCheat = AntiCheatActive
+            }
+            writefile(ConfigFileName, HttpService:JSONEncode(configData))
+        end)
+    end
+end
+
+local function LoadConfig()
+    if type(readfile) == "function" and type(isfile) == "function" then
+        pcall(function()
+            if isfile(ConfigFileName) then
+                local savedData = HttpService:JSONEncode(readfile(ConfigFileName))
+                if type(savedData) == "table" then
+                    AutoExecuteActive = savedData.AutoExecute == true
+                    AutoRejoinActive = savedData.AutoRejoin == true
+                    RedactNameActive = savedData.RedactName == true
+                    AntiCheatActive = savedData.AntiCheat == true
+                end
+            end
+        end)
+    end
+end
+LoadConfig()
+
+local nameVisibilityState = {Character = nil, Connections = {}, Guis = {}, Watches = {}}
+local function clearNameVisibility()
+    local state = nameVisibilityState
+    for _, connection in ipairs(state.Connections) do connection:Disconnect() end
+    table.clear(state.Connections)
+    for gui, connection in pairs(state.Watches) do connection:Disconnect() state.Watches[gui] = nil end
+    for gui, wasEnabled in pairs(state.Guis) do if gui.Parent then gui.Enabled = wasEnabled end end
+    table.clear(state.Guis)
+    state.Character = nil
+end
+
+local function applyNameVisibility()
+    local state = nameVisibilityState
+    local character = LP.Character
+    if state.Character ~= character then
+        clearNameVisibility()
+        state.Character = character
+        if character then
+            local function watchNameGui(gui)
+                if not gui:IsA("BillboardGui") or gui.Name ~= "nameGui" or state.Guis[gui] ~= nil then return end
+                state.Guis[gui] = gui.Enabled
+                state.Watches[gui] = gui:GetPropertyChangedSignal("Enabled"):Connect(function()
+                    if RedactNameActive and gui.Enabled then gui.Enabled = false end
+                end)
+                if RedactNameActive then gui.Enabled = false end
+            end
+            table.insert(state.Connections, character.DescendantAdded:Connect(watchNameGui))
+            table.insert(state.Connections, character.DescendantRemoving:Connect(function(gui)
+                if state.Guis[gui] ~= nil then
+                    local connection = state.Watches[gui]
+                    if connection then connection:Disconnect() end
+                    state.Watches[gui] = nil
+                    gui.Enabled = state.Guis[gui]
+                    state.Guis[gui] = nil
+                end
+            end))
+            for _, gui in ipairs(character:GetDescendants()) do watchNameGui(gui) end
+        end
+    end
+    for gui, wasEnabled in pairs(state.Guis) do
+        if gui.Parent then gui.Enabled = not RedactNameActive and wasEnabled end
+    end
+end
+
+LP.CharacterAdded:Connect(function() applyNameVisibility() end)
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    if AntiCheatActive and method == "Kick" and self == LP then return end
+    return oldNamecall(self, ...)
+end)
+
+CoreGui.RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
+    if AutoRejoinActive and (child.Name == "ErrorPrompt" or child:FindFirstChild("ErrorTitle")) then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", { Title = "ERDN Public", Text = "Reconectando al servidor... 🔄", Duration = 5 })
+        end)
+        task.wait(1)
+        TeleportService:Teleport(game.PlaceId, LP)
+    end
+end)
+
+local PETS = {
+    ["Omega Overlord"] = { repSpeed = 20, strength = 0, durability = 0, rebirth = 0 },
+    ["Swift Samurai"] = { repSpeed = 15, strength = 0, durability = 0, rebirth = 0 },
+    ["Titanium Hydra"] = { repSpeed = 0, strength = 0, durability = 0, rebirth = 2 },
+    ["Tribal Overlord"] = { repSpeed = 0, strength = 0, durability = 0, rebirth = 2 },
+    ["Common Boss Pet"] = { repSpeed = 5, strength = 0, durability = 0, rebirth = 0 },
+    ["Rare Boss Pet"] = { repSpeed = 7, strength = 0, durability = 0, rebirth = 0 },
+    ["Epic Boss Pet"] = { repSpeed = 10, strength = 0, durability = 0, rebirth = 0 },
+    ["Rainbow Boss Pet"] = { repSpeed = 10, strength = 7, durability = 0, rebirth = 0 },
+    ["Legendary Boss Pet"] = { repSpeed = 10, strength = 10, durability = 0, rebirth = 0 },
+    ["Mythic Boss Pet"] = { repSpeed = 10, strength = 20, durability = 0, rebirth = 0 },
+    ["Inferno Drake"] = { repSpeed = 40, strength = 0, durability = 0, rebirth = 0 },
+}
+
+local MAX_PET_SLOTS = 12
+
+local function applyPetLoadout(selected, isCurrent)
+    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+    local remote = rEvents and rEvents:FindFirstChild("equipPetEvent")
+    if not remote then return false end
+
+    local petsFolder = LP:FindFirstChild("petsFolder")
+    if petsFolder then
+        for _, folder in ipairs(petsFolder:GetChildren()) do
+            if folder:IsA("Folder") then
+                for _, pet in ipairs(folder:GetChildren()) do
+                    if isCurrent and not isCurrent() then return false end
+                    remote:FireServer("unequipPet", pet)
+                end
+            end
+        end
+    end
+    task.wait(0.05)
+    for _, pet in ipairs(selected) do
+        if isCurrent and not isCurrent() then return false end
+        remote:FireServer("equipPet", pet)
+    end
+    return not isCurrent or isCurrent()
+end
+
+local function sendTrainingReps(state, rate, maxBurst, canSend)
+    local now = os.clock()
+    local elapsed = math.clamp(now - (state.LastAt or now), 0, 0.1)
+    state.LastAt = now
+    state.Tokens = math.min(maxBurst, (state.Tokens or 0) + rate * elapsed)
+    local sent = 0
+    local muscleEvent = LP:FindFirstChild("muscleEvent")
+    while state.Tokens >= 1 and canSend() and muscleEvent do
+        muscleEvent:FireServer("rep")
+        state.Tokens = state.Tokens - 1
+        sent = sent + 1
+    end
+    return sent
+end
+
+local function createFarmLoop(getState, rate, burst)
+    task.spawn(function()
+        local cachedEvent = LP:FindFirstChild("muscleEvent")
+        LP.ChildAdded:Connect(function(child) if child.Name == "muscleEvent" then cachedEvent = child end end)
+        local INTERVAL = burst / rate
+        while true do
+            if getState() then
+                if not cachedEvent or not cachedEvent.Parent then cachedEvent = LP:FindFirstChild("muscleEvent") end
+                if cachedEvent then
+                    local start = os.clock()
+                    for i = 1, burst do
+                        if not getState() then break end
+                        pcall(function() cachedEvent:FireServer("rep") end)
+                    end
+                    local remaining = INTERVAL - (os.clock() - start)
+                    if remaining > 0 then task.wait(remaining) else task.wait(0.02) end
+                else
+                    task.wait(0.05)
+                end
+            else
+                task.wait(0.15)
+            end
+        end
+    end)
+end
+
+createFarmLoop(function() return FastFarm800 end, 800, 60)
+createFarmLoop(function() return FastFarm1k5k end, 1200, 100)
+
+-- =======================================================
+-- 6. CREACIÓN DE TODAS LAS PESTAÑAS CON WINDUI
+-- =======================================================
+local PrincipalTab = Window:Tab({ Title = "Principal", Icon = "home" })
+local FarmingTab   = Window:Tab({ Title = "Farming", Icon = "dumbbell" })
+local RebirthTab   = Window:Tab({ Title = "Rebirth", Icon = "refresh-cw" })
+local RocksTab     = Window:Tab({ Title = "Auto Rocks", Icon = "mountain" })
+local AutoGymTab   = Window:Tab({ Title = "Auto Gym", Icon = "activity" })
+local StatsTab     = Window:Tab({ Title = "Stats", Icon = "bar-chart-2" })
+local GiftTab      = Window:Tab({ Title = "Gift", Icon = "gift" })
+local BossTab      = Window:Tab({ Title = "Boss", Icon = "shield" })
+local TeleportTab  = Window:Tab({ Title = "Teleport", Icon = "compass" })
+local SettingsTab  = Window:Tab({ Title = "Settings", Icon = "settings" })
+
+local tabs = {
+    boss = BossTab,
+    rebirths = RebirthTab,
+    strength = { running = false, FastRepToggle = { Set = function(self, val) FastFarm800 = val end } },
+    strength2 = { running = false, FastRepToggle = { Set = function(self, val) FastFarm1k5k = val end } }
+}
+
+local function formatNumber(number)
+    local isNegative = number < 0
+    number = math.abs(number)
+    if number >= 1e18 then return (isNegative and "-" or "") .. string.format("%.2fQi", number / 1e18)
+    elseif number >= 1e15 then return (isNegative and "-" or "") .. string.format("%.2fQa", number / 1e15)
+    elseif number >= 1e12 then return (isNegative and "-" or "") .. string.format("%.2fT", number / 1e12)
+    elseif number >= 1e9 then return (isNegative and "-" or "") .. string.format("%.2fB", number / 1e9)
+    elseif number >= 1e6 then return (isNegative and "-" or "") .. string.format("%.2fM", number / 1e6)
+    elseif number >= 1e3 then return (isNegative and "-" or "") .. string.format("%.2fK", number / 1e3)
+    else return (isNegative and "-" or "") .. string.format("%.0f", number) end
+end
+
+local function formatCurrentStat(val) return tostring(val or 0) end
+
+-- -------------------------------------------------------
+-- PESTAÑA: PRINCIPAL
+-- -------------------------------------------------------
+PrincipalTab:Section({ Title = "Información del Hub" })
+PrincipalTab:Paragraph({ Title = "Bienvenido a ERDN Premium", Desc = "Script oficial creado por Christian & Cristian para Muscle Legends." })
+PrincipalTab:Paragraph({ Title = "Usuario conectado", Desc = "Hola, " .. LP.DisplayName .. " 👋" })
+
+PrincipalTab:Section({ Title = "Utilidades" })
+PrincipalTab:Toggle({
+    Title = "Hide Name",
+    Desc = "Oculta el nombre sobre tu personaje en el juego",
+    Value = RedactNameActive,
+    Callback = function(state)
+        RedactNameActive = state
+        applyNameVisibility()
+        SaveConfig()
+    end
+})
+
+PrincipalTab:Toggle({
+    Title = "Anti-AFK",
+    Desc = "Protección automática contra inactividad",
+    Value = true,
+    Callback = function(state)
+        if state then
+            pcall(function() StarterGui:SetCore("SendNotification", { Title = "ERDN Public", Text = "Anti-AFK Activo 🛡️", Duration = 3 }) end)
+        end
+    end
+})
+
+PrincipalTab:Toggle({
+    Title = "Anti Lag",
+    Desc = "Optimiza gráficos y desactiva sombras",
+    Value = false,
+    Callback = function(state)
+        pcall(function()
+            if state then
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+                Lighting.GlobalShadows = false
+                Lighting.Technology = Enum.LightingTechnology.Compatibility
+                Lighting.Brightness = 2
+            else
+                settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+                Lighting.GlobalShadows = true
+                Lighting.Technology = Enum.LightingTechnology.Future
+            end
+        end)
+    end
+})
+
+PrincipalTab:Toggle({
+    Title = "Optimizador Ug",
+    Desc = "Modo Nube: Máxima fluidez y eliminación de efectos",
+    Value = false,
+    Callback = function(state)
+        pcall(function()
+            if state then
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Fire") or obj:IsA("Smoke") then
+                        obj.Enabled = false
+                    elseif obj:IsA("BasePart") then
+                        obj.CastShadow = false
+                    end
+                end
+                RunService.StepSimulation = false
+            end
+        end)
+    end
+})
+
+-- -------------------------------------------------------
+-- PESTAÑA: FARMING
+-- -------------------------------------------------------
+FarmingTab:Section({ Title = "Modos de Farming" })
+FarmingTab:Toggle({
+    Title = "Farm 800 Rep/s",
+    Desc = "Entrenamiento rápido estándar",
+    Value = false,
+    Callback = function(state)
+        FastFarm800 = state
+        if state then FastFarm1k5k = false end
+    end
+})
+
+FarmingTab:Toggle({
+    Title = "OP Farm 5k Rep/s",
+    Desc = "Entrenamiento ultra rápido avanzado",
+    Value = false,
+    Callback = function(state)
+        FastFarm1k5k = state
+        if state then FastFarm800 = false end
+    end
+})
+
+FarmingTab:Section({ Title = "Auto Strength OP (Velocidad Regulable)" })
+FarmingTab:Paragraph({ Title = "Recommended speed: 40", Desc = "40 = ~900 reps/s fluidas | Máx 99 = ~1550-1600 reps/s" })
+
+local REPS_PER_CYCLE = 180
+local REP_DELAY = 0.01
+local MAX_PING = 1100
+
+-- Bucle OP de Auto Strength integrado con pets, rocas y huevos
+task.spawn(function()
+    while true do
+        if getgenv()._AutoRepFarmEnabled then
+            local success, ping = pcall(function() return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue() end)
+            ping = success and ping or 100
+            if ping > MAX_PING then
+                task.wait(5)
+            else
+                if LP:FindFirstChild("muscleEvent") then
+                    for i = 1, REPS_PER_CYCLE do
+                        LP.muscleEvent:FireServer("rep")
+                    end
+                end
+                task.wait(REP_DELAY)
+            end
+        else
+            task.wait(1)
+        end
+    end
+end)
+
+FarmingTab:Input({
+    Title = "Reps speed",
+    Desc = "Escribe un valor del 1 al 99",
+    Value = "40",
+    Placeholder = "40",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num > 0 then
+            if num > 99 then num = 99 end
+            REPS_PER_CYCLE = math.floor(num * 3.2 + 52)
+        end
+    end
+})
+
+FarmingTab:Toggle({
+    Title = "Auto Strength",
+    Desc = "Activa o desactiva el entrenamiento automático OP",
+    Value = false,
+    Callback = function(state)
+        getgenv()._AutoRepFarmEnabled = state
+    end
+})
+
+-- -------------------------------------------------------
+-- PESTAÑA: REBIRTH
+-- -------------------------------------------------------
+RebirthTab:Section({ Title = "Fast Rebirth (Packs & Combos)" })
+
+local function triggerCombination()
+    pcall(function()
+        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+        local remote = rEvents and rEvents:FindFirstChild("rebirthRemote")
+        if remote then
+            if remote:IsA("RemoteFunction") then remote:InvokeServer("rebirthRequest")
+            elseif remote:IsA("RemoteEvent") then remote:FireServer("rebirthRequest") end
+        end
+    end)
+end
+
+RebirthTab.leaderstats = LP:WaitForChild("leaderstats")
+RebirthTab.rebirths = RebirthTab.leaderstats:WaitForChild("Rebirths")
+RebirthTab.strength = RebirthTab.leaderstats:WaitForChild("Strength")
+RebirthTab.running = false
+RebirthTab.workerActive = false
+RebirthTab.startedAt = 0
+RebirthTab.timerStarted = false
+RebirthTab.hasStarted = false
+RebirthTab.baselineReady = false
+RebirthTab.measuredCycles = 0
+RebirthTab.lastConfirmedAt = nil
+RebirthTab.nextRequestAt = 0
+RebirthTab.cooldown = 6
+RebirthTab.totalElapsed = 0
+RebirthTab.statSamples = {Rebirths = RebirthTab.rebirths.Value}
+RebirthTab.statGains = {Rebirths = 0}
+RebirthTab.generation = 0
+RebirthTab.adaptive = { TargetSeconds = 3, MinRate = 3, MaxRate = 50, SendRate = 10, ProbeRate = 10, ProbeReps = 10, FeedbackTimeout = 1, StrengthPerRep = nil, LastTrainingSeconds = nil }
+
+RebirthTab.Status = RebirthTab:Paragraph({ Title = "Status", Desc = "Status: Inactive" })
+RebirthTab.Runtime = RebirthTab:Paragraph({ Title = "Runtime", Desc = "Runtime: 0d 0h 0m 0s" })
+RebirthTab.RebirthStats = RebirthTab:Paragraph({ Title = "Rebirths Info", Desc = "Rebirths: 0 | Gained: 0" })
+
+RebirthTab.updateStats = function()
+    RebirthTab.RebirthStats.Desc = "Rebirths: " .. formatCurrentStat(RebirthTab.rebirths.Value) .. " | Gained: " .. formatNumber(RebirthTab.statGains.Rebirths)
+end
+
+RebirthTab.recordRebirth = function()
+    local current = RebirthTab.rebirths.Value
+    local previous = RebirthTab.statSamples.Rebirths
+    if current > previous then
+        RebirthTab.lastConfirmedAt = os.clock()
+        RebirthTab.nextRequestAt = RebirthTab.lastConfirmedAt + RebirthTab.cooldown
+        if RebirthTab.running then
+            if not RebirthTab.baselineReady then
+                RebirthTab.baselineReady = true
+                RebirthTab.statSamples.Rebirths = current
+                RebirthTab.timerStarted = true
+                RebirthTab.startedAt = os.clock()
+            else
+                RebirthTab.statGains.Rebirths = RebirthTab.statGains.Rebirths + math.max(0, current - previous)
+            end
+        end
+    end
+    RebirthTab.statSamples.Rebirths = current
+    RebirthTab.updateStats()
+end
+RebirthTab.rebirths:GetPropertyChangedSignal("Value"):Connect(RebirthTab.recordRebirth)
+
+RebirthTab:Toggle({
+    Title = "Auto Rebirths combination",
+    Desc = "Sirven Golems/Packs/Dragon",
+    Value = false,
+    Callback = function(state)
+        RebirthsCombination = state
+        if state then
+            RebirthChaos = false
+            RebirthsTitans = false
+            AutoRebirth = false
+            triggerCombination()
+        end
+    end
+})
+
+RebirthTab:Toggle({
+    Title = "Rebirth chaos",
+    Desc = "Samurai (Rep) / Tribal (Rebirth)",
+    Value = false,
+    Callback = function(state)
+        RebirthChaos = state
+        if state then RebirthsCombination = false; RebirthsTitans = false; AutoRebirth = false end
+    end
+})
+
+RebirthTab:Toggle({
+    Title = "Rebirths titans",
+    Desc = "Omega (Rep) / Titanium (Rebirth)",
+    Value = false,
+    Callback = function(state)
+        RebirthsTitans = state
+        if state then RebirthsCombination = false; RebirthChaos = false; AutoRebirth = false end
+    end
+})
+
+RebirthTab:Section({ Title = "Opciones de Rebirth Adicionales (Target e Infinite)" })
+
+local targetRebirthValue = 10 
+_G.targetRebirthActive = false
+_G.infiniteRebirthActive = false
+
+RebirthTab:Input({
+    Title = "Rebirth Target",
+    Desc = "Ingresa la cantidad objetivo de renacimientos",
+    Value = "10",
+    Placeholder = "Ejemplo: 100",
+    Callback = function(text)
+        local newValue = tonumber(text)
+        if newValue and newValue > 0 then
+            targetRebirthValue = newValue
+            pcall(function() StarterGui:SetCore("SendNotification", { Title = "Objetivo Actualizado", Text = "Nuevo objetivo: " .. tostring(targetRebirthValue), Duration = 3 }) end)
+        end
+    end
+})
+
+local targetSwitch, infiniteSwitch
+
+targetSwitch = RebirthTab:Toggle({
+    Title = "Auto Rebirth Target",
+    Desc = "Renacimiento automático hasta alcanzar el objetivo",
+    Value = false,
+    Callback = function(bool)
+        _G.targetRebirthActive = bool
+        if bool then
+            if _G.infiniteRebirthActive and infiniteSwitch then
+                pcall(function() infiniteSwitch:Set(false) end)
+                _G.infiniteRebirthActive = false
+            end
+            task.spawn(function()
+                while _G.targetRebirthActive do
+                    task.wait(0.1)
+                    local currentRebirths = Rebirths.Value
+                    if currentRebirths >= targetRebirthValue then
+                        _G.targetRebirthActive = false
+                        pcall(function() targetSwitch:Set(false) end)
+                        pcall(function() StarterGui:SetCore("SendNotification", { Title = "¡Objetivo Alcanzado!", Text = "Has alcanzado " .. tostring(targetRebirthValue) .. " renacimientos", Duration = 5 }) end)
+                        break
+                    end
+                    pcall(function()
+                        local remote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("rebirthRemote")
+                        if remote then remote:InvokeServer("rebirthRequest") end
+                    end)
+                end
+            end)
+        end
+    end
+})
+
+infiniteSwitch = RebirthTab:Toggle({
+    Title = "Auto Rebirth (Infinite)",
+    Desc = "Renacimiento continuo sin parar",
+    Value = false,
+    Callback = function(bool)
+        _G.infiniteRebirthActive = bool
+        if bool then
+            if _G.targetRebirthActive and targetSwitch then
+                pcall(function() targetSwitch:Set(false) end)
+                _G.targetRebirthActive = false
+            end
+            task.spawn(function()
+                while _G.infiniteRebirthActive do
+                    task.wait(0.1)
+                    pcall(function()
+                        local remote = ReplicatedStorage:FindFirstChild("rEvents") and ReplicatedStorage.rEvents:FindFirstChild("rebirthRemote")
+                        if remote then remote:InvokeServer("rebirthRequest") end
+                    end)
+                end
+            end)
+        end
+    end
+})
+
+-- -------------------------------------------------------
+-- PESTAÑA: AUTO ROCKS
+-- -------------------------------------------------------
+RocksTab:Section({ Title = "Farming de Rocas" })
+
+local activeRock = nil
+local function getrocktool()
+    local backpack = LP:FindFirstChild("Backpack")
+    local char = LP.Character
+    if backpack and char and char:FindFirstChild("Humanoid") then
+        local punch = backpack:FindFirstChild("Punch") or char:FindFirstChild("Punch")
+        if punch and punch.Parent == backpack then char.Humanoid:EquipTool(punch) end
+    end
+    pcall(function()
+        if LP:FindFirstChild("muscleEvent") then
+            LP.muscleEvent:FireServer("punch", "leftHand")
+            LP.muscleEvent:FireServer("punch", "rightHand")
+        end
+    end)
+end
+
+local rockList = {
+    { Name = "Farm Tiny Island Rock", MinDur = 0, DurVal = 0 },
+    { Name = "Farm Starter Island Rock", MinDur = 100, DurVal = 100 },
+    { Name = "Farm Legend Beach Rock", MinDur = 5000, DurVal = 5000 },
+    { Name = "Farm Frost Gym Rock", MinDur = 150000, DurVal = 150000 },
+    { Name = "Farm Mythical Gym Rock", MinDur = 400000, DurVal = 400000 },
+    { Name = "Farm Eternal Gym Rock", MinDur = 750000, DurVal = 750000 },
+    { Name = "Farm Legend Gym Rock", MinDur = 1000000, DurVal = 1000000 },
+    { Name = "Farm Muscle King Gym Rock", MinDur = 5000000, DurVal = 5000000 },
+    { Name = "Farm Ancient Jungle Rock", MinDur = 10000000, DurVal = 10000000 },
+	{ Name = "Farm Industrial Jungle Rock", MinDur = 25000000, DurVal = 25000000 },
+	{ Name = "Farm Hallowed Rock", MinDur = 0, DurVal = 0 },
+}
+
+for _, rockInfo in ipairs(rockList) do
+    RocksTab:Toggle({
+        Title = rockInfo.Name,
+        Desc = "Requiere " .. rockInfo.MinDur .. " de Durabilidad",
+        Value = false,
+        Callback = function(bool)
+            if bool then
+                activeRock = rockInfo.Name
+                task.spawn(function()
+                    while activeRock == rockInfo.Name do
+                        task.wait(0.01)
+                        pcall(function()
+                            local durabilityObj = LP:FindFirstChild("Durability")
+                            if durabilityObj and durabilityObj.Value >= rockInfo.MinDur then
+                                getrocktool()
+                                local machinesFolder = workspace:FindFirstChild("machinesFolder")
+                                if machinesFolder then
+                                    for _, v in pairs(machinesFolder:GetDescendants()) do
+                                        if v.Name == "neededDurability" and v.Value == rockInfo.DurVal then
+                                            local rockPart = v.Parent and v.Parent:FindFirstChild("Rock")
+                                            local char = LP.Character
+                                            if rockPart and char then
+                                                local rightHand = char:FindFirstChild("RightHand")
+                                                local leftHand = char:FindFirstChild("LeftHand")
+                                                if rightHand and leftHand then
+                                                    firetouchinterest(rockPart, rightHand, 0)
+                                                    firetouchinterest(rockPart, rightHand, 1)
+                                                    firetouchinterest(rockPart, leftHand, 0)
+                                                    firetouchinterest(rockPart, leftHand, 1)
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end)
+                    end
+                end)
+            else
+                if activeRock == rockInfo.Name then activeRock = nil end
+            end
+        end
+    })
+end
+
+-- -------------------------------------------------------
+-- PESTAÑA: AUTO GYM
+-- -------------------------------------------------------
+AutoGymTab:Section({ Title = "Gimnasio Automático" })
+AutoGymTab:Paragraph({ Title = "Próximamente", Desc = "Esta sección estará disponible en futuras actualizaciones..." })
+
+-- -------------------------------------------------------
+-- PESTAÑA: STATS
+-- -------------------------------------------------------
+StatsTab:Section({ Title = "Estadísticas en Tiempo Real" })
+local stopwatchParagraph = StatsTab:Paragraph({ Title = "Fast Rep Time", Desc = "0d 0h 0m 0s" })
+local strengthRateParagraph = StatsTab:Paragraph({ Title = "Strength Rate", Desc = "0/s" })
+local durabilityRateParagraph = StatsTab:Paragraph({ Title = "Durability Rate", Desc = "0/s" })
+local rebirthsRateParagraph = StatsTab:Paragraph({ Title = "Rebirths Rate", Desc = "0/s" })
+local strengthProgress = StatsTab:Paragraph({ Title = "Strength Progress", Desc = "Strength: 0 | Gained: 0" })
+local durabilityProgress = StatsTab:Paragraph({ Title = "Durability Progress", Desc = "Durability: 0 | Gained: 0" })
+local rebirthsProgress = StatsTab:Paragraph({ Title = "Rebirths Progress", Desc = "Rebirths: 0 | Gained: 0" })
+
+local leaderstats = LP:WaitForChild("leaderstats")
+local strengthStat = leaderstats:WaitForChild("Strength")
+local durabilityStat = LP:WaitForChild("Durability")
+local rebirthsStat = leaderstats:WaitForChild("Rebirths")
+
+local startTime = tick()
+local initialStrength = strengthStat.Value
+local initialDurability = durabilityStat.Value
+local initialRebirths = rebirthsStat.Value
+local strengthHistory = {}
+local durabilityHistory = {}
+local rebirthsHistory = {}
+local calculationInterval = 2
+
+task.spawn(function()
+    local lastCalcTime = tick()
+    while true do
+        local currentTime = tick()
+        local currentStrength = strengthStat.Value
+        local currentDurability = durabilityStat.Value
+        local currentRebirths = rebirthsStat.Value
+        
+        local elapsedTime = currentTime - startTime
+        local days = math.floor(elapsedTime / (24 * 3600))
+        local hours = math.floor((elapsedTime % (24 * 3600)) / 3600)
+        local minutes = math.floor((elapsedTime % 3600) / 60)
+        local seconds = math.floor(elapsedTime % 60)
+        stopwatchParagraph.Desc = string.format("%dd %dh %dm %ds", days, hours, minutes, seconds)
+        
+        strengthProgress.Desc = "Strength: " .. formatNumber(currentStrength) .. " | Gained: " .. formatNumber(currentStrength - initialStrength)
+        durabilityProgress.Desc = "Durability: " .. formatNumber(currentDurability) .. " | Gained: " .. formatNumber(currentDurability - initialDurability)
+        rebirthsProgress.Desc = "Rebirths: " .. tostring(currentRebirths) .. " | Gained: " .. tostring(currentRebirths - initialRebirths)
+        
+        table.insert(strengthHistory, {time = currentTime, value = currentStrength})
+        table.insert(durabilityHistory, {time = currentTime, value = currentDurability})
+        table.insert(rebirthsHistory, {time = currentTime, value = currentRebirths})
+        
+        while #strengthHistory > 0 and currentTime - strengthHistory[1].time > calculationInterval do table.remove(strengthHistory, 1) end
+        while #durabilityHistory > 0 and currentTime - durabilityHistory[1].time > calculationInterval do table.remove(durabilityHistory, 1) end
+        while #rebirthsHistory > 0 and currentTime - rebirthsHistory[1].time > calculationInterval do table.remove(rebirthsHistory, 1) end
+        
+        if currentTime - lastCalcTime >= calculationInterval then
+            lastCalcTime = currentTime
+            if #strengthHistory >= 2 then
+                local rate = (strengthHistory[#strengthHistory].value - strengthHistory[1].value) / calculationInterval
+                strengthRateParagraph.Desc = formatNumber(rate) .. "/s"
+            end
+            if #durabilityHistory >= 2 then
+                local rate = (durabilityHistory[#durabilityHistory].value - durabilityHistory[1].value) / calculationInterval
+                durabilityRateParagraph.Desc = formatNumber(rate) .. "/s"
+            end
+            if #rebirthsHistory >= 2 then
+                local rate = (rebirthsHistory[#rebirthsHistory].value - rebirthsHistory[1].value) / calculationInterval
+                rebirthsRateParagraph.Desc = formatNumber(rate) .. "/s"
+            end
+        end
+        task.wait(0.2)
+    end
+end)
+
+-- -------------------------------------------------------
+-- PESTAÑA: GIFT
+-- -------------------------------------------------------
+GiftTab:Section({ Title = "Gift Eggs" })
+local proteinEggParagraph = GiftTab:Paragraph({ Title = "Protein Eggs", Desc = "Protein Eggs: 0" })
+
+task.spawn(function()
+    while true do
+        local count = 0
+        local backpack = LP:FindFirstChild("Backpack")
+        if backpack and backpack:FindFirstChild("Protein Egg") then count = 1 end
+        proteinEggParagraph.Desc = "Protein Eggs: " .. count
+        task.wait(2)
+    end
+end)
+
+GiftTab:Section({ Title = "Regalar Protein Eggs" })
+local targetEggPlayerName = ""
+local giftEggAmount = 0
+
+GiftTab:Input({
+    Title = "Username",
+    Desc = "Nombre del jugador objetivo",
+    Value = "",
+    Placeholder = "Escribe el nombre...",
+    Callback = function(text) targetEggPlayerName = text end
+})
+
+GiftTab:Input({
+    Title = "Cantidad",
+    Desc = "Cantidad de eggs a regalar",
+    Value = "",
+    Placeholder = "Ejemplo: 5",
+    Callback = function(text) giftEggAmount = tonumber(text) or 0 end
+})
+
+GiftTab:Button({
+    Title = "Gift Protein Eggs",
+    Callback = function()
+        pcall(function()
+            StarterGui:SetCore("SendNotification", { Title = "Gift", Text = "Enviando eggs a " .. targetEggPlayerName, Duration = 3 })
+        end)
+    end
+})
+
+GiftTab:Section({ Title = "Auto Consumir y Ruleta" })
+GiftTab:Toggle({
+    Title = "Eat Everything",
+    Desc = "Consume consumibles automáticamente",
+    Value = false,
+    Callback = function(state) getgenv().autoEatRunning = state end
+})
+
+GiftTab:Toggle({
+    Title = "Auto Spin Fortune Wheel",
+    Desc = "Gira la ruleta automáticamente",
+    Value = false,
+    Callback = function(state)
+        _G.AutoSpinWheel = state
+        task.spawn(function()
+            while _G.AutoSpinWheel do
+                pcall(function()
+                    local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+                    if rEvents and rEvents:FindFirstChild("openFortuneWheelRemote") then
+                        rEvents.openFortuneWheelRemote:InvokeServer("openFortuneWheel")
+                    end
+                end)
+                task.wait(0.6)
+            end
+        end)
+    end
+})
+
+-- -------------------------------------------------------
+-- PESTAÑA: BOSS
+-- -------------------------------------------------------
+BossTab:Section({ Title = "Boss Farming General" })
+local bossStatus = BossTab:Paragraph({ Title = "Status", Desc = "Status: Waiting for Boss" })
+local bossNameLabel = BossTab:Paragraph({ Title = "Boss", Desc = "Boss: None" })
+local bossHealthLabel = BossTab:Paragraph({ Title = "Health", Desc = "Health: 0 / 0" })
+
+BossTab:Toggle({
+    Title = "Auto Farm Boss",
+    Desc = "Ataca jefes automáticamente",
+    Value = false,
+    Callback = function(state)
+        BossTab.DataRunning = state
+        bossStatus.Desc = state and "Status: Fighting" or "Status: Disabled"
+    end
+})
+
+BossTab:Section({ Title = "Halloween Boss Farming" })
+BossTab:Toggle({
+    Title = "Auto Farm Halloween Boss",
+    Desc = "Ataca jefes de Halloween automáticamente",
+    Value = false,
+    Callback = function(state)
+        BossTab.HalloweenRunning = state
+    end
+})
+
+-- -------------------------------------------------------
+-- PESTAÑA: TELEPORT
+-- -------------------------------------------------------
+TeleportTab:Section({ Title = "Zonas del Mapa" })
+local function tpTo(cf, name)
+    pcall(function()
+        local char = LP.Character or LP.CharacterAdded:Wait()
+        char:WaitForChild("HumanoidRootPart").CFrame = cf
+        StarterGui:SetCore("SendNotification", { Title = "Teletransporte", Text = "Teleported to " .. name, Duration = 3 })
+    end)
+end
+
+TeleportTab:Button({ Title = "Spawn", Callback = function() tpTo(CFrame.new(2, 8, 115), "Spawn") end })
+TeleportTab:Button({ Title = "Secret Area", Callback = function() tpTo(CFrame.new(1947, 2, 6191), "Secret Area") end })
+TeleportTab:Button({ Title = "Tiny Island", Callback = function() tpTo(CFrame.new(-34, 7, 1903), "Tiny Island") end })
+TeleportTab:Button({ Title = "Frozen Island", Callback = function() tpTo(CFrame.new(-2600, 3.7, -403), "Frozen Island") end })
+TeleportTab:Button({ Title = "Mythical Island", Callback = function() tpTo(CFrame.new(2255, 7, 1071), "Mythical Island") end })
+TeleportTab:Button({ Title = "Eternal Island", Callback = function() tpTo(CFrame.new(-6768, 7, -1287), "Eternal Island") end })
+TeleportTab:Button({ Title = "Legend Island", Callback = function() tpTo(CFrame.new(4604, 991, -3887), "Legend Island") end })
+TeleportTab:Button({ Title = "Muscle King Island", Callback = function() tpTo(CFrame.new(-8748, 123, -5865), "Muscle King") end })
+TeleportTab:Button({ Title = "Jungle Island", Callback = function() tpTo(CFrame.new(-8659, 6, 2384), "Jungle Island") end })
+TeleportTab:Button({ Title = "Industrial Gym", Callback = function() tpTo(CFrame.new(-5563, 60, 4942), "Industrial Gym") end })
+TeleportTab:Button({ Title = "Halloween Gym", Callback = function() tpTo(CFrame.new(5558, 86, 5838), "Halloween Gym") end })
+
+-- -------------------------------------------------------
+-- PESTAÑA: SETTINGS
+-- -------------------------------------------------------
+SettingsTab:Section({ Title = "Protección y Anti-Cheat" })
+SettingsTab:Toggle({
+    Title = "Anti-Cheat / Kick Protection",
+    Desc = "Evita expulsiones por el juego",
+    Value = AntiCheatActive,
+    Callback = function(state) AntiCheatActive = state; SaveConfig() end
+})
+
+SettingsTab:Section({ Title = "Auto Execute & Rejoin" })
+SettingsTab:Toggle({
+    Title = "Auto Execute",
+    Desc = "Guarda la configuración actual",
+    Value = AutoExecuteActive,
+    Callback = function(state) AutoExecuteActive = state; SaveConfig() end
+})
+
+SettingsTab:Toggle({
+    Title = "Auto Rejoin",
+    Desc = "Reconecta si pierdes conexión",
+    Value = AutoRejoinActive,
+    Callback = function(state) AutoRejoinActive = state; SaveConfig() end
+})
+
+print("ERDN Premium completo cargado con éxito en Delta Mobile.")
