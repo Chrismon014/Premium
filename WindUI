@@ -1,5 +1,5 @@
 -- =======================================================
--- MYSTERY HUB - SCRIPT COMPLETO CON WINDUI
+-- ERDN PAID - SCRIPT COMPLETO CON WINDUI
 -- =======================================================
 
 -- 1. CARGA DE LIBRERÍA WINDUI
@@ -33,8 +33,8 @@ WindUI:AddTheme({
 -- 3. CREAR VENTANA PRINCIPAL
 -- =======================================================
 local Window = WindUI:CreateWindow({
-    Title = "Mystery Hub",
-    Subtitle = "By Sherya - Isabella",
+    Title = "ERDN Premium",
+    Subtitle = "By Christian - Cristian",
     Size = UDim2.fromOffset(580, 420),
     Transparent = true, 
     Theme = "MysteryTheme", 
@@ -42,104 +42,9 @@ local Window = WindUI:CreateWindow({
     
     -- Configuración optimizada del botón de minimizado
     OpenButton = {
-        Title = "Open Mystery Hub",
+        Title = "Open ERDN Premium",
         Enabled = true,
         CornerRadius = UDim.new(0, 10),
         StrokeThickness = 2
     }
-})
-
--- =======================================================
--- 4. CREACIÓN DE PESTAÑAS Y CONTENIDO
--- =======================================================
-local HomeTab     = Window:Tab({ Title = "Home", Icon = "home" })
-local FarmingTab  = Window:Tab({ Title = "Farming", Icon = "pickaxe" })
-local RebirthsTab = Window:Tab({ Title = "Rebirths", Icon = "refresh-cw" })
-local PacksTab    = Window:Tab({ Title = "Packs", Icon = "package" })
-
--- -------------------------------------------------------
--- Pestaña: Home
--- -------------------------------------------------------
-HomeTab:Section({ Title = "Información del Hub" })
-
-HomeTab:Paragraph({
-    Title = "Bienvenido a Mystery Hub",
-    Desc = "Script oficial creado por Sherya & Isabella para Muscle Legends."
-})
-
-local PlayerName = game.Players.LocalPlayer.DisplayName
-HomeTab:Paragraph({
-    Title = "Usuario conectado",
-    Desc = "Hola, " .. PlayerName .. " 👋"
-})
-
--- -------------------------------------------------------
--- Pestaña: Farming
--- -------------------------------------------------------
-FarmingTab:Section({ Title = "Opciones de Auto Farm" })
-
-FarmingTab:Toggle({
-    Title = "Auto Strength / Durability",
-    Desc = "Entrena automáticamente tu fuerza y durabilidad",
-    Value = false,
-    Callback = function(state)
-        print("Auto Farm:", state)
-    end
-})
-
-FarmingTab:Dropdown({
-    Title = "Seleccionar Cinta / Isla",
-    Desc = "Elige la zona donde vas a entrenar",
-    Values = {"Tiny Island", "Starter", "Legend Island", "Frost Gym", "Mythical Gym"},
-    Value = "Starter",
-    Callback = function(option)
-        print("Zona seleccionada:", option)
-    end
-})
-
--- -------------------------------------------------------
--- Pestaña: Rebirths
--- -------------------------------------------------------
-RebirthsTab:Section({ Title = "Configuración de Rebirths" })
-
-RebirthsTab:Toggle({
-    Title = "Auto Rebirth Infinito",
-    Desc = "Hace Rebirth automáticamente al alcanzar el requisito",
-    Value = false,
-    Callback = function(state)
-        print("Auto Rebirth:", state)
-    end
-})
-
-RebirthsTab:Input({
-    Title = "Meta de Rebirths (Target)",
-    Desc = "Ingresa la cantidad objetivo de Rebirths",
-    Placeholder = "Ejemplo: 100",
-    Callback = function(text)
-        print("Meta de Rebirths:", text)
-    end
-})
-
--- -------------------------------------------------------
--- Pestaña: Packs
--- -------------------------------------------------------
-PacksTab:Section({ Title = "Apertura de Packs / Pets" })
-
-PacksTab:Toggle({
-    Title = "Auto Open Pets / Crystals",
-    Desc = "Abre cofres o cristales automáticamente",
-    Value = false,
-    Callback = function(state)
-        print("Auto Open Packs:", state)
-    end
-})
-
-PacksTab:Dropdown({
-    Title = "Seleccionar Cristal / Pack",
-    Desc = "Elige el cristal que deseas abrir",
-    Values = {"Blue Crystal", "Red Crystal", "Mythical Crystal", "Inferno Crystal"},
-    Value = "Blue Crystal",
-    Callback = function(option)
-        print("Pack seleccionado:", option)
-    end
 })
