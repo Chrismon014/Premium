@@ -1,0 +1,73 @@
+local RunService = game:GetService("RunService")
+local cloneref = (cloneref or clonereference or function(instance)
+	return instance
+end)
+local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
+local HttpService = cloneref(game:GetService("HttpService"))
+
+local WindUI
+
+do
+	local ok, result = pcall(function()
+		return require("./src/Init")
+	end)
+
+	if ok then
+		WindUI = result
+	else
+		if cloneref(game:GetService("RunService")):IsStudio() then
+			WindUI = require(cloneref(ReplicatedStorage:WaitForChild("WindUI"):WaitForChild("Init")))
+		else
+			WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+		end
+	end
+end
+
+-- */  Window Setup  /* --
+local Window = WindUI:CreateWindow({
+	Title = "Mi Script Hub | WindUI",
+	Folder = "myscripthub",
+	Icon = "solar:folder-2-bold-duotone",
+	NewElements = true,
+	HideSearchBar = false,
+
+	OpenButton = {
+		Title = "Abrir UI",
+		CornerRadius = UDim.new(1, 0),
+		StrokeThickness = 3,
+		Enabled = true,
+		Draggable = true,
+		OnlyMobile = false,
+		Scale = 0.5,
+		Color = ColorSequence.new(
+			Color3.fromHex("#30FF6A"),
+			Color3.fromHex("#e7ff2f")
+		),
+	},
+	Topbar = {
+		Height = 44,
+		ButtonsType = "Mac",
+	},
+})
+
+-- */  Pestañas Solicitadas  /* --
+
+local PrincipalTab = Window:Tab({ Title = "Principal", Icon = "solar:home-2-bold", Border = true })
+local FarmTab = Window:Tab({ Title = "Farm", Icon = "solar:settings-bold", Border = true })
+local RebirthTab = Window:Tab({ Title = "Rebirth", Icon = "solar:refresh-bold", Border = true })
+local StatsTab = Window:Tab({ Title = "Stats", Icon = "solar:chart-bold", Border = true })
+local RockTab = Window:Tab({ Title = "Rock", Icon = "solar:box-bold", Border = true })
+local GymTab = Window:Tab({ Title = "Gym", Icon = "solar:dumbell-bold", Border = true })
+local TeleportTab = Window:Tab({ Title = "Teleport", Icon = "solar:map-bold", Border = true })
+local BossesTab = Window:Tab({ Title = "Bosses", Icon = "solar:shield-warning-bold", Border = true })
+local RaceTab = Window:Tab({ Title = "Race", Icon = "solar:running-bold", Border = true })
+local ShopTab = Window:Tab({ Title = "Shop", Icon = "solar:cart-bold", Border = true })
+local ConfigTab = Window:Tab({ Title = "Config", Icon = "solar:file-text-bold", Border = true })
+local CreditosTab = Window:Tab({ Title = "Créditos", Icon = "solar:info-circle-bold", Border = true })
+
+-- Ejemplo básico para probar la pestaña de créditos
+CreditosTab:Section({ Title = "Créditos del Script" })
+CreditosTab:Paragraph({
+	Title = "Desarrollado con WindUI",
+	Desc = "Interfaz limpia y optimizada lista para tus funciones.",
+})
