@@ -50,6 +50,9 @@ local Window = WindUI:CreateWindow({
 	},
 })
 
+-- Ajustar tamaño general de la interfaz (puedes subir o bajar este valor, ej: 1.1, 1.2)
+Window:SetUIScale(1.15)
+
 -- */  Pestañas Solicitadas  /* --
 
 local PrincipalTab = Window:Tab({ Title = "Principal", Icon = "solar:home-2-bold", Border = true })
@@ -65,9 +68,9 @@ local ShopTab = Window:Tab({ Title = "Shop", Icon = "solar:cart-bold", Border = 
 local ConfigTab = Window:Tab({ Title = "Config", Icon = "solar:file-text-bold", Border = true })
 local CreditosTab = Window:Tab({ Title = "Créditos", Icon = "solar:info-circle-bold", Border = true })
 
--- Ejemplo básico para probar la pestaña de créditos
+-- Ejemplo inicial en la pestaña de créditos
 CreditosTab:Section({ Title = "Créditos del Script" })
 CreditosTab:Paragraph({
 	Title = "Desarrollado con WindUI",
-	Desc = "Interfaz limpia y optimizada lista para tus funciones.",
+	Desc = "Interfaz lista para tus funciones de Muscle Legends.",
 })
